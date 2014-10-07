@@ -1,0 +1,19 @@
+Foo {
+	John Smith
+	Jane Doe
+
+	What, Hello {
+		J.R.R. Tolkein: Classic
+	}
+
+	Bar, Fizz {
+		Benedict Arnold
+		James "Jimmy" Douglas
+
+		Buzz {}
+
+		George R. R. Martin: Fantasy
+	}
+}
+
+William Wallace
