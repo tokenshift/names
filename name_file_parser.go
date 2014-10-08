@@ -38,6 +38,12 @@ func tags() []string {
 	return distinct
 }
 
+func parseNameFiles(filenames []string) {
+	for _, filename := range(filenames) {
+		parseNameFile(filename)
+	}
+}
+
 func parseNameFile(filename string) {
 	buffer, err := ioutil.ReadFile(filename)
 	if err != nil {
