@@ -1,8 +1,12 @@
-Foo {
+// Some test names.
+// This should exhaustively test the namefile parser.
+// http://en.wikipedia.org/wiki/List_of_The_Stand_characters.
+Just Foo {
 	John Smith
 	Jane Doe
 
-	What, Hello {
+	// Testing another comment.
+	What What, Hello {
 		J.R.R. Tolkein: Classic
 	}
 
@@ -14,6 +18,8 @@ Foo {
 
 		George R. R. Martin: Fantasy
 	}
+
+	Peter Goldsmith-Redman
 }
 
 William Wallace

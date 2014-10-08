@@ -1,0 +1,48 @@
+// This is an example list of names drawn from
+// http://en.wikipedia.org/wiki/List_of_The_Stand_characters.
+Steven King, Fiction, Character {
+	Project Blue, Male {
+		Charles D. Campion
+		William "Billy" Starkey
+		Len Creighton
+	}
+
+	Boulder, Female {
+		Abagail
+		Frances Goldsmith
+		Susan Stern
+		Dayna Jurgens
+		Nadine Cross
+		Lucy Swann
+	}
+
+	Boulder, Male {
+		Stuart Redman
+		Peter Goldsmith-Redman
+		Harold Lauder
+		Glen Bateman
+		Susan Stern
+		Larry Underwood
+		Farris
+		Nick Andros
+		Tom Cullen
+		Ralph Brentner
+	}
+
+	Boulder, Animal, Dog {
+		Kojak
+	}
+
+	Las Vegas, Male {
+		Randall Flagg
+		Lloyd Henreid
+		Whitney Horgan
+		Barry Dorgan
+		Bobby Terry
+	}
+
+	Las Vegas, Female {
+		Julie Lawry
+		Jenny Engstrom
+	}
+}

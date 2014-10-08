@@ -5,6 +5,9 @@ import (
 )
 
 func main() {
-	nameFile := parseNameFile("test.names")
-	fmt.Println(nameFile)
+	db := parseNameFile("test.names")
+
+	db.ForEach(func (name TaggedName) {
+		fmt.Println(name)
+	})
 }
