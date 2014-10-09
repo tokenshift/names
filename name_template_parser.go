@@ -1,8 +1,10 @@
 package main
 
 import (
-	//"github.com/prataprc/goparsec"
+	p "github.com/prataprc/goparsec"
 )
+
+// Data/AST Definition
 
 type Template interface {
 }
@@ -25,6 +27,20 @@ type Or struct {
 
 type Not Matcher
 
+
+// Entry Point and Non-Terminals
+
 func parseNameTemplate(template string) Template {
-	return nil
+	scanner := p.NewScanner([]byte(template))
+	t, _ := tag(scanner)
+	if term, ok := t.(*p.Terminal); ok {
+		return Tag(term.Value)
+	} else {
+		return nil
+	}
 }
+
+
+// Terminals
+
+var tag = p.Token(`^[^,{}:\r\n\+\-\|]+`, "TAG")
