@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	. "github.com/prataprc/goparsec"
+	p "github.com/prataprc/goparsec"
 )
 
 type TaggedName struct {
@@ -52,21 +52,21 @@ func parseNameFile(filename string) {
 	}
 
 	tagStack = make([][]string, 0)
-	scanner := NewScanner(buffer)
+	scanner := p.NewScanner(buffer)
 	parseBlockContents(scanner)
 }
 
 // Block = TagList BlockContents '}'
-func parseBlock(s Scanner) (ParsecNode, Scanner) {
-	return And(func (ns []ParsecNode) ParsecNode {
+func parseBlock(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	return p.And(func (ns []p.ParsecNode) p.ParsecNode {
 		tagStack = tagStack[:len(tagStack)-1]
 		return struct{}{}
 	}, parseTagList, parseBlockContents, rbrace)(s)
 }
 
 // TagList = TagListStart* TagListEnd
-func parseTagList(s Scanner) (ParsecNode, Scanner) {
-	inits := Kleene(func (ns []ParsecNode) ParsecNode {
+func parseTagList(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	inits := p.Kleene(func (ns []p.ParsecNode) p.ParsecNode {
 		tags := make([]string, len(ns))
 		for i, n := range(ns) {
 			tags[i] = n.(string)
@@ -74,7 +74,7 @@ func parseTagList(s Scanner) (ParsecNode, Scanner) {
 		return tags
 	}, parseTagListStart)
 
-	return And(func (ns []ParsecNode) ParsecNode {
+	return p.And(func (ns []p.ParsecNode) p.ParsecNode {
 		tags := append(ns[0].([]string), ns[1].(string))
 		tagStack = append(tagStack, tags)
 		return struct{}{}
@@ -82,29 +82,29 @@ func parseTagList(s Scanner) (ParsecNode, Scanner) {
 }
 
 // TagListStart = ident ','
-func parseTagListStart(s Scanner) (ParsecNode, Scanner) {
-	return And(func (ns []ParsecNode) ParsecNode {
-		return strings.TrimSpace(ns[0].(*Terminal).Value)
+func parseTagListStart(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	return p.And(func (ns []p.ParsecNode) p.ParsecNode {
+		return strings.TrimSpace(ns[0].(*p.Terminal).Value)
 	}, ident, comma)(s)
 }
 
 // TagListEnd = ident '{'
-func parseTagListEnd(s Scanner) (ParsecNode, Scanner) {
-	return And(func (ns []ParsecNode) ParsecNode {
-		return strings.TrimSpace(ns[0].(*Terminal).Value)
+func parseTagListEnd(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	return p.And(func (ns []p.ParsecNode) p.ParsecNode {
+		return strings.TrimSpace(ns[0].(*p.Terminal).Value)
 	}, ident, lbrace)(s)
 }
 
 // BlockContents = BlockContent*
-func parseBlockContents(s Scanner) (ParsecNode, Scanner) {
-	return Kleene(func (ns []ParsecNode) ParsecNode {
+func parseBlockContents(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	return p.Kleene(func (ns []p.ParsecNode) p.ParsecNode {
 		return struct{}{}
 	}, parseBlockContent)(s)
 }
 
 // BlockContent = comment | Block | Name
-func parseBlockContent(s Scanner) (ParsecNode, Scanner) {
-	return OrdChoice(func (ns []ParsecNode) ParsecNode {
+func parseBlockContent(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	return p.OrdChoice(func (ns []p.ParsecNode) p.ParsecNode {
 		if name, ok := ns[0].(TaggedName); ok {
 			name.Tags = append(name.Tags, tags()...)
 			fmt.Println(name)
@@ -114,8 +114,8 @@ func parseBlockContent(s Scanner) (ParsecNode, Scanner) {
 }
 
 // Name = ident [InlineTags]
-func parseName(s Scanner) (ParsecNode, Scanner) {
-	inlineTags := Maybe(func (ns []ParsecNode) ParsecNode {
+func parseName(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	inlineTags := p.Maybe(func (ns []p.ParsecNode) p.ParsecNode {
 		if ns == nil {
 			return []string {}
 		} else {
@@ -123,23 +123,23 @@ func parseName(s Scanner) (ParsecNode, Scanner) {
 		}
 	}, parseInlineTags)
 
-	return And(func (ns []ParsecNode) ParsecNode {
+	return p.And(func (ns []p.ParsecNode) p.ParsecNode {
 		if tags, ok := ns[1].([]string); ok {
 			return TaggedName {
-				Name: ns[0].(*Terminal).Value,
+				Name: ns[0].(*p.Terminal).Value,
 				Tags: tags,
 			}
 		} else {
 			return TaggedName {
-				Name: ns[0].(*Terminal).Value,
+				Name: ns[0].(*p.Terminal).Value,
 			}
 		}
 	}, ident, inlineTags)(s)
 }
 
 // InlineTags = ':' TagListStart* ident
-func parseInlineTags(s Scanner) (ParsecNode, Scanner) {
-	inits := Kleene(func (ns []ParsecNode) ParsecNode {
+func parseInlineTags(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	inits := p.Kleene(func (ns []p.ParsecNode) p.ParsecNode {
 		tags := make([]string, len(ns))
 		for i, n := range(ns) {
 			tags[i] = n.(string)
@@ -147,39 +147,39 @@ func parseInlineTags(s Scanner) (ParsecNode, Scanner) {
 		return tags
 	}, parseTagListStart)
 
-	return And(func (ns []ParsecNode) ParsecNode {
-		return append(ns[1].([]string), ns[2].(*Terminal).Value)
+	return p.And(func (ns []p.ParsecNode) p.ParsecNode {
+		return append(ns[1].([]string), ns[2].(*p.Terminal).Value)
 	}, colon, inits, ident)(s)
 }
 
-func ident(s Scanner) (ParsecNode, Scanner) {
-	return Token(`^[^,{}:\r\n]+`, "IDENT")(s)
+func ident(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	return p.Token(`^[^,{}:\r\n]+`, "IDENT")(s)
 }
 
-func comma(s Scanner) (ParsecNode, Scanner) {
-	return Token(`^,`, "COMMA")(s)
+func comma(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	return p.Token(`^,`, "COMMA")(s)
 }
 
-func colon(s Scanner) (ParsecNode, Scanner) {
-	return Token(`^:`, "COLON")(s)
+func colon(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	return p.Token(`^:`, "COLON")(s)
 }
 
-func lbrace(s Scanner) (ParsecNode, Scanner) {
-	return Token(`^{`, "LBRACE")(s)
+func lbrace(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	return p.Token(`^{`, "LBRACE")(s)
 }
 
-func rbrace(s Scanner) (ParsecNode, Scanner) {
-	return Token(`^}`, "RBRACE")(s)
+func rbrace(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	return p.Token(`^}`, "RBRACE")(s)
 }
 
-func comment(s Scanner) (ParsecNode, Scanner) {
-	return Token(`^//.*\n`, "COMMENT")(s)
+func comment(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	return p.Token(`^//.*\n`, "COMMENT")(s)
 }
 
-func values(ns []ParsecNode) []string {
+func values(ns []p.ParsecNode) []string {
 	values := make([]string, len(ns))
 	for i, n := range(ns) {
-		values[i] = strings.TrimSpace(n.(*Terminal).Value)
+		values[i] = strings.TrimSpace(n.(*p.Terminal).Value)
 	}
 	return values
 }
