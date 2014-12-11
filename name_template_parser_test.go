@@ -9,7 +9,7 @@ func assertEquals(t *T, expected, actual interface{}) bool {
 	if reflect.DeepEqual(expected, actual) {
 		return true
 	} else {
-		t.Errorf("Expected %v (%T), got %v (%T)",
+		t.Errorf("Expected %v <%T>, got %v <%T>",
 			expected, expected, actual, actual)
 		return false
 	}
@@ -38,14 +38,24 @@ func TestOr(t *T) {
 	// "Foo | Bar" -> (Or (Tag "Foo") (Tag "Bar"))
 	assertEquals(t,
 		Or{Tag("Foo"), Tag("Bar")},
-		parseNameTemplate("Foo + Bar"))
+		parseNameTemplate("Foo | Bar"))
 }
 
 func TestNot(t *T) {
 	// "Foo - Bar" -> (And (Tag "Foo") (Not (Tag "Bar")))
 	assertEquals(t,
-		And{Tag("Foo"), Not(Tag("Bar"))},
-		parseNameTemplate("Foo + Bar"))
+		And{Tag("Foo"), Not{Tag("Bar")}},
+		parseNameTemplate("Foo - Bar"))
+
+	// "- Bar" -> (Not (Tag "Bar"))
+	assertEquals(t,
+		Not{Tag("Bar")},
+		parseNameTemplate("- Bar"))
+
+	// "-Bar" -> (Not (Tag "Bar"))
+	assertEquals(t,
+		Not{Tag("Bar")},
+		parseNameTemplate("-Bar"))
 }
 
 func TestMultipleOperators(t *T) {
@@ -56,7 +66,7 @@ func TestMultipleOperators(t *T) {
 	assertEquals(t,
 		Or{
 			And{Tag("Foo"), Tag("Bar")},
-			And{Tag("Fizz"), Not(Tag("Buzz"))},
+			And{Tag("Fizz"), Not{Tag("Buzz")}},
 		},
 		parseNameTemplate("Foo + Bar | Fizz - Buzz"))
 }
@@ -72,7 +82,7 @@ func TestOperatorPrecedence(t *T) {
 	assertEquals(t,
 		Or{
 			And{Tag("A"), Tag("B")},
-			And{Tag("C"), Not(Tag("D"))},
+			And{Tag("C"), Not{Tag("D")}},
 		},
 		parseNameTemplate("A + B | C - D"))
 
@@ -80,7 +90,7 @@ func TestOperatorPrecedence(t *T) {
 	assertEquals(t,
 		Or{
 			And{
-				And{Tag("A"), Not(Tag("B"))},
+				And{Tag("A"), Not{Tag("B")}},
 				Tag("C"),
 			},
 			Tag("D"),
@@ -94,7 +104,7 @@ func TestOperatorPrecedence(t *T) {
 			And{
 				And{
 					Tag("B"),
-					Not(Tag("C")),
+					Not{Tag("C")},
 				},
 				Tag("D"),
 			},
@@ -122,7 +132,7 @@ func TestGrouping(t *T) {
 	// "A - B | C" -> (Or (And A (Not B)) C)
 	assertEquals(t,
 		Or{
-			And{Tag("A"), Not(Tag("B"))},
+			And{Tag("A"), Not{Tag("B")}},
 			Tag("C"),
 		},
 		parseNameTemplate("A - B | C"))
@@ -131,7 +141,7 @@ func TestGrouping(t *T) {
 	assertEquals(t,
 		And{
 			Tag("A"),
-			Not(Or{Tag("B"), Tag("C")}),
+			Not{Or{Tag("B"), Tag("C")}},
 		},
 		parseNameTemplate("A + B | C"))
 
@@ -188,14 +198,14 @@ func TestFilters(t *T) {
 func TestMaybe(t *T) {
 	// "[A]" -> (Maybe A)
 	assertEquals(t,
-		Maybe(Tag("A")),
+		Maybe{Tag("A")},
 		parseNameTemplate("[A]"))
 
 	// "[A + B | C:foo]" -> (Maybe (Or (And A B) (And C :foo)))
 	assertEquals(t,
-		Maybe(Or{
+		Maybe{Or{
 			And{Tag("A"), Tag("B")},
 			And{Tag("C"), Filter("foo")},
-		}),
+		}},
 		parseNameTemplate("[A + B | C:foo]"))
 }
