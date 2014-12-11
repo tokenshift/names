@@ -13,7 +13,7 @@ type Template interface {
 }
 
 // A single 'piece' of a template, like a Tag (possibly negated).
-type Chunk interface {
+type Matcher interface {
 }
 
 type Maybe struct {
@@ -41,28 +41,28 @@ func (f Filter) String() string {
 }
 
 // A conjunction of tags/chunks that must all must match.
-type And []Chunk
+type And []Matcher
 
 func (a And) String() string {
-	return fmt.Sprintf("(And %v)", a)
+	return fmt.Sprintf("(And %s)", []Matcher(a))
 }
 
 // A disjunction of conjunctions of which at least one must match.
 type Or []And
 
 func (o Or) String() string {
-	return fmt.Sprintf("(Or %v)", o)
+	return fmt.Sprintf("(Or %s)", []And(o))
 }
 
 // A single, negated tag.
 type Not Tag
 
 func (n Not) String() string {
-	return fmt.Sprintf("(Not %s)", n)
+	return fmt.Sprintf("(Not %s)", string(n))
 }
 
 
-// Entry Point
+// Entry Point and Non-Terminals
 
 func parseNameTemplate(template string) Template {
 	scanner := p.NewScanner([]byte(template))
@@ -74,53 +74,59 @@ func parseNameTemplate(template string) Template {
 	}
 }
 
-// Disjunction: A | B.
+// Disjunction: A (| B)*
 func parseDisj(s p.Scanner) (p.ParsecNode, p.Scanner) {
-	disj := p.And(func (ns []p.ParsecNode) p.ParsecNode {
-		return nil
-	}, parseConj, pipe, parseDisj)
-
-	return p.OrdChoice(func (ns []p.ParsecNode) p.ParsecNode {
-		return ns[0].(Chunk)
-	}, disj, parseConj)(s)
+	return p.Kleene(func(ns []p.ParsecNode) p.ParsecNode {
+		terms := make([]And, len(ns))
+		for i, n := range(ns) {
+			terms[i] = n.(And)
+		}
+		return Or(terms)
+	}, parseConj, pipe)(s)
 }
 
-// Conjunction: A + B.
+// Conjunction: A (+ B)*
 func parseConj(s p.Scanner) (p.ParsecNode, p.Scanner) {
-	conj := p.And(func (ns []p.ParsecNode) p.ParsecNode {
-		return nil
-	}, parseNeg, plus, parseConj)
+	// A conjunction can be a tag (optionally with a + or -), followed by any
+	// number of AndTags or NotTags ("+ A" or "- A").
+	head := p.OrdChoice(func(ns []p.ParsecNode) p.ParsecNode {
+		return ns[0].(Matcher)
+	}, parseAndTag, parseNotTag, tag)
 
-	return p.OrdChoice(func (ns []p.ParsecNode) p.ParsecNode {
-		return nil
-	}, conj, parseNeg)(s)
+	tailEntry := p.OrdChoice(func(ns []p.ParsecNode) p.ParsecNode {
+		return ns[0].(Matcher)
+	}, parseAndTag, parseNotTag)
+
+	tail := p.Kleene(func(ns []p.ParsecNode) p.ParsecNode {
+		terms := make([]Matcher, len(ns))
+		for i, n := range(ns) {
+			terms[i] = n.(Matcher)
+		}
+		return terms
+	}, tailEntry)
+
+	return p.And(func(ns []p.ParsecNode) p.ParsecNode {
+		t := ns[0].(Matcher)
+		ts := ns[1].([]Matcher)
+		return And(append([]Matcher{t}, ts...))
+	}, head, tail)(s)
 }
 
-// Negation: A - B
-func parseNeg(s p.Scanner) (p.ParsecNode, p.Scanner) {
-	neg := p.And(func (ns []p.ParsecNode) p.ParsecNode {
-		return nil
-	}, parseTag, parseUnaryNeg)
-
-	return p.OrdChoice(func (ns []p.ParsecNode) p.ParsecNode {
-		return nil
-	}, neg, parseUnaryNeg)(s)
+// A negated tag (- A)
+func parseNotTag(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	return p.And(func(ns []p.ParsecNode) p.ParsecNode {
+		return Not(ns[1].(Tag))
+	}, minus, tag)(s)
 }
 
-// Unary Negation: - B
-func parseUnaryNeg(s p.Scanner) (p.ParsecNode, p.Scanner) {
-	neg := p.And(func (ns []p.ParsecNode) p.ParsecNode {
-		return nil
-	}, minus, parseNeg)
-
-	return p.OrdChoice(func (ns []p.ParsecNode) p.ParsecNode {
-		return nil
-	}, neg, parseTag)(s)
+// An added tag (+ A)
+func parseAndTag(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	return p.And(func(ns []p.ParsecNode) p.ParsecNode {
+		return ns[1].(Tag)
+	}, plus, tag)(s)
 }
 
-// Negation: 
-
-func parseTag(s p.Scanner) (p.ParsecNode, p.Scanner) {
+func tag(s p.Scanner) (p.ParsecNode, p.Scanner) {
 	n, s2 := p.Token(`^[^,{}:\r\n\+\-\|]+`, "TAG")(s)
 	if tag, ok := n.(*p.Terminal); ok {
 		return Tag(strings.TrimSpace(tag.Value)), s2
@@ -128,9 +134,6 @@ func parseTag(s p.Scanner) (p.ParsecNode, p.Scanner) {
 		return nil, s
 	}
 }
-
-
-// Terminals
 
 var plus = p.Token(`^\+`, "PLUS")
 var minus = p.Token(`^\-`, "MINUS")

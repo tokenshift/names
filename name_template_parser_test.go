@@ -16,14 +16,14 @@ func assertEquals(t *T, expected, actual interface{}) bool {
 }
 
 func TestParseTag(t *T) {
-	// "Foo" -> (Tag "Foo")
+	// "Foo" -> (Or (And (Tag "Foo"))))
 	assertEquals(t,
-		Tag("Foo"),
+		Or([]And{And([]Matcher{Tag("Foo")})}),
 		parseNameTemplate("Foo"))
 
-	// "Hello World" -> (Tag "Hello World")
+	// "Hello World" -> (Or (And (Tag "Hello World")))
 	assertEquals(t,
-		Tag("Hello World"),
+		Or([]And{And([]Matcher{Tag("Hello World")})}),
 		parseNameTemplate("Hello World"))
 }
 
@@ -32,7 +32,18 @@ func TestAnd(t *T) {
 	// -> (Or (And (Tag "Foo") (Tag "Bar"))
 	assertEquals(t,
 		Or([]And{
-			And([]Chunk{
+			And([]Matcher{
+				Tag("Foo"),
+				Tag("Bar"),
+			}),
+		}),
+		parseNameTemplate("Foo + Bar"))
+
+	// "Foo + Bar + Fizz + Buzz"
+	// -> (Or (And (Tag "Foo") (Tag "Bar") (Tag "Fizz") (Tag "Buzz"))
+	assertEquals(t,
+		Or([]And{
+			And([]Matcher{
 				Tag("Foo"),
 				Tag("Bar"),
 			}),
@@ -45,10 +56,10 @@ func TestOr(t *T) {
 	// -> (Or (And (Tag "Foo")) (And (Tag "Bar")))
 	assertEquals(t,
 		Or([]And{
-			And([]Chunk{
+			And([]Matcher{
 				Tag("Foo"),
 			}),
-			And([]Chunk{
+			And([]Matcher{
 				Tag("Bar"),
 			}),
 		}),
@@ -60,7 +71,7 @@ func TestNot(t *T) {
 	// -> (Or (And (Tag "Foo") (Not "Bar")))
 	assertEquals(t,
 		Or([]And{
-			And([]Chunk{
+			And([]Matcher{
 				Tag("Foo"),
 				Not("Bar"),
 			}),
@@ -71,7 +82,7 @@ func TestNot(t *T) {
 	// -> (Or (And (Not "Bar")))
 	assertEquals(t,
 		Or([]And{
-			And([]Chunk{
+			And([]Matcher{
 				Not("Bar"),
 			}),
 		}),
@@ -81,7 +92,7 @@ func TestNot(t *T) {
 	// -> (Or (And (Not "Bar")))
 	assertEquals(t,
 		Or([]And{
-			And([]Chunk{
+			And([]Matcher{
 				Not("Bar"),
 			}),
 		}),
@@ -95,8 +106,8 @@ func TestMultipleOperators(t *T) {
 	//      (And (Tag "Fizz") (Not "Buzz")))
 	assertEquals(t,
 		Or([]And{
-			And([]Chunk{Tag("Foo"), Tag("Bar")}),
-			And([]Chunk{Tag("Fizz"), Not("Buzz")}),
+			And([]Matcher{Tag("Foo"), Tag("Bar")}),
+			And([]Matcher{Tag("Fizz"), Not("Buzz")}),
 		}),
 		parseNameTemplate("Foo + Bar | Fizz - Buzz"))
 }
@@ -111,7 +122,7 @@ func TestOperatorAssociativity(t *T) {
 	//        (Not "Delta")))
 	assertEquals(t,
 		Or([]And{
-			And([]Chunk{
+			And([]Matcher{
 				Tag("Alpha"),
 				Not("Beta"),
 				Not("Gamma"),
@@ -133,10 +144,10 @@ func TestOperatorAssociativity(t *T) {
 	//        (Not "Foxtrot")))
 	assertEquals(t,
 		Or([]And{
-			And([]Chunk{
+			And([]Matcher{
 				Tag("Omega"),
 			}),
-			And([]Chunk{
+			And([]Matcher{
 				Tag("Alpha"),
 				Tag("Beta"),
 				Tag("Gamma"),
@@ -153,7 +164,7 @@ func TestOperatorPrecedence(t *T) {
 	// -> (Or (And (Tag A) (Tag B)) (And (Tag C) (Not D)))
 	assertEquals(t,
 		Or([]And{
-			And([]Chunk{Tag("A"), Tag("B")}),
+			And([]Matcher{Tag("A"), Tag("B")}),
 			And{Tag("C"), Not("D")},
 		}),
 		parseNameTemplate("A + B | C - D"))
@@ -162,8 +173,8 @@ func TestOperatorPrecedence(t *T) {
 	// -> (Or (And (Tag A) (Not B) (Tag C)) (Tag D))
 	assertEquals(t,
 		Or([]And{
-			And([]Chunk{Tag("A"), Not("B"), Tag("C")}),
-			And([]Chunk{Tag("D")}),
+			And([]Matcher{Tag("A"), Not("B"), Tag("C")}),
+			And([]Matcher{Tag("D")}),
 		}),
 		parseNameTemplate("A - B + C | D"))
 
@@ -172,8 +183,8 @@ func TestOperatorPrecedence(t *T) {
 	//        (And (Tag B) (Not C) (Tag D)))
 	assertEquals(t,
 		Or([]And{
-			And([]Chunk{Tag("A")}),
-			And([]Chunk{Tag("B"), Not("C"), Tag("D")}),
+			And([]Matcher{Tag("A")}),
+			And([]Matcher{Tag("B"), Not("C"), Tag("D")}),
 		}),
 		parseNameTemplate("A | B - C + D"))
 }
@@ -187,15 +198,15 @@ func TestFilters(t *T) {
 	// "A | :foo" -> (Or A :foo)
 	assertEquals(t,
 		Or([]And{
-			And([]Chunk{Tag("A")}),
-			And([]Chunk{Filter("foo")}),
+			And([]Matcher{Tag("A")}),
+			And([]Matcher{Filter("foo")}),
 		}),
 		parseNameTemplate("A | :foo"))
 
 	// "A:foo" -> (And A :foo)
 	assertEquals(t,
 		Or([]And{
-			And([]Chunk{
+			And([]Matcher{
 				Tag("A"),
 				Filter("foo"),
 			}),
@@ -205,7 +216,7 @@ func TestFilters(t *T) {
 	// "A + B:foo" -> (And A B:foo)
 	assertEquals(t,
 		Or([]And{
-			And([]Chunk{
+			And([]Matcher{
 				Tag("A"),
 				Filtered{"B", "foo"},
 			}),
@@ -215,7 +226,7 @@ func TestFilters(t *T) {
 	// "A:foo + B" -> (And A:foo B)
 	assertEquals(t,
 		Or([]And{
-			And([]Chunk{
+			And([]Matcher{
 				Filtered{"A", "foo"},
 				Tag("B"),
 			}),
@@ -228,7 +239,7 @@ func TestMaybe(t *T) {
 	assertEquals(t,
 		Maybe{
 			Or([]And{
-				And([]Chunk{
+				And([]Matcher{
 					Tag("A"),
 				}),
 			}),
@@ -239,11 +250,11 @@ func TestMaybe(t *T) {
 	assertEquals(t,
 		Maybe{
 			Or([]And{
-				And([]Chunk{
+				And([]Matcher{
 					Tag("A"),
 					Tag("B"),
 				}),
-				And([]Chunk{
+				And([]Matcher{
 					Filtered{"C", "foo"},
 				}),
 			}),
