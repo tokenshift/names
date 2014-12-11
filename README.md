@@ -16,7 +16,7 @@ of a full name.
 These examples make use of the `Steven King.names` name file.
 
 ```
-names '(Las Vegas + Male):first | Dog' '[:given]' 'Boulder:last'
+names 'Las Vegas:first + Male:first | Dog' '[:given]' 'Boulder:last'
 ```
 
 This will generate a name consisting of a first name taken from all first names
