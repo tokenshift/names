@@ -134,19 +134,16 @@ func TestOperatorAssociativity(t *T) {
 	// "Alpha + Beta + Gamma - Delta - Epsilon - Foxtrot | Omega"
 	// -> (Or
 	//      (And
-	//        (Tag "Omega"))
-	//      (And
 	//        (Tag "Alpha")
 	//        (Tag "Beta")
 	//        (Tag "Gamma")
 	//        (Not "Delta")
 	//        (Not "Epsilon")
-	//        (Not "Foxtrot")))
+	//        (Not "Foxtrot"))
+	//      (And
+	//        (Tag "Omega")))
 	assertEquals(t,
 		Or([]And{
-			And([]Matcher{
-				Tag("Omega"),
-			}),
 			And([]Matcher{
 				Tag("Alpha"),
 				Tag("Beta"),
@@ -154,6 +151,9 @@ func TestOperatorAssociativity(t *T) {
 				Not("Delta"),
 				Not("Epsilon"),
 				Not("Foxtrot"),
+			}),
+			And([]Matcher{
+				Tag("Omega"),
 			}),
 		}),
 		parseNameTemplate("Alpha + Beta + Gamma - Delta - Epsilon - Foxtrot | Omega"))
