@@ -30,35 +30,41 @@ type Tag string
 // A standalone filter.
 type Filter string
 
+func (f Filter) String() string {
+	return fmt.Sprintf(":%s", string(f))
+}
+
 // A filter applied to a tag.
 type Filtered struct {
 	Tag
 	Filter
 }
 
-func (f Filter) String() string {
-	return fmt.Sprintf(":%s", string(f))
+func (f Filtered) String() string {
+	return fmt.Sprintf("%s%s", f.Tag, f.Filter)
 }
 
 // A conjunction of tags/chunks that must all must match.
 type And []Matcher
 
 func (a And) String() string {
-	return fmt.Sprintf("(And %s)", []Matcher(a))
+	return fmt.Sprintf("(And %v)", []Matcher(a))
 }
 
 // A disjunction of conjunctions of which at least one must match.
 type Or []And
 
 func (o Or) String() string {
-	return fmt.Sprintf("(Or %s)", []And(o))
+	return fmt.Sprintf("(Or %v)", []And(o))
 }
 
-// A single, negated tag.
-type Not Tag
+// A single, negated term.
+type Not struct {
+	Matcher
+}
 
 func (n Not) String() string {
-	return fmt.Sprintf("(Not %s)", string(n))
+	return fmt.Sprintf("(Not %s)", n.Matcher)
 }
 
 
@@ -91,7 +97,7 @@ func parseConj(s p.Scanner) (p.ParsecNode, p.Scanner) {
 	// number of AndTags or NotTags ("+ A" or "- A").
 	head := p.OrdChoice(func(ns []p.ParsecNode) p.ParsecNode {
 		return ns[0].(Matcher)
-	}, parseAndTag, parseNotTag, tag)
+	}, parseAndTag, parseNotTag, parseTerm)
 
 	tailEntry := p.OrdChoice(func(ns []p.ParsecNode) p.ParsecNode {
 		return ns[0].(Matcher)
@@ -115,21 +121,56 @@ func parseConj(s p.Scanner) (p.ParsecNode, p.Scanner) {
 // A negated tag (- A)
 func parseNotTag(s p.Scanner) (p.ParsecNode, p.Scanner) {
 	return p.And(func(ns []p.ParsecNode) p.ParsecNode {
-		return Not(ns[1].(Tag))
-	}, minus, tag)(s)
+		return Not{ns[1].(Matcher)}
+	}, minus, parseTerm)(s)
 }
 
 // An added tag (+ A)
 func parseAndTag(s p.Scanner) (p.ParsecNode, p.Scanner) {
 	return p.And(func(ns []p.ParsecNode) p.ParsecNode {
-		return ns[1].(Tag)
-	}, plus, tag)(s)
+		return ns[1].(Matcher)
+	}, plus, parseTerm)(s)
 }
+
+// A term (tag, filter, or both).
+func parseTerm(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	return p.OrdChoice(func(ns []p.ParsecNode) p.ParsecNode {
+		return ns[0].(Matcher)
+	}, parseFiltered, parseFilter, tag)(s)
+}
+
+// A filtered term (Term:filter)
+func parseFiltered(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	return p.And(func(ns []p.ParsecNode) p.ParsecNode {
+		return Filtered{
+			ns[0].(Tag),
+			ns[1].(Filter),
+		}
+	}, tag, parseFilter)(s)
+}
+
+// A filter (:filter)
+func parseFilter(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	return p.And(func(ns []p.ParsecNode) p.ParsecNode {
+		return ns[1].(Filter)
+	}, colon, filter)(s)
+}
+
+// Terminals
 
 func tag(s p.Scanner) (p.ParsecNode, p.Scanner) {
 	n, s2 := p.Token(`^[^,{}:\r\n\+\-\|]+`, "TAG")(s)
 	if tag, ok := n.(*p.Terminal); ok {
 		return Tag(strings.TrimSpace(tag.Value)), s2
+	} else {
+		return nil, s
+	}
+}
+
+func filter(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	n, s2 := p.Token(`^[a-z]+`, "FILTER")(s)
+	if filter, ok := n.(*p.Terminal); ok {
+		return Filter(strings.TrimSpace(filter.Value)), s2
 	} else {
 		return nil, s
 	}

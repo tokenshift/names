@@ -73,7 +73,7 @@ func TestNot(t *T) {
 		Or([]And{
 			And([]Matcher{
 				Tag("Foo"),
-				Not("Bar"),
+				Not{Tag("Bar")},
 			}),
 		}),
 		parseNameTemplate("Foo - Bar"))
@@ -83,7 +83,7 @@ func TestNot(t *T) {
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{
-				Not("Bar"),
+				Not{Tag("Bar")},
 			}),
 		}),
 		parseNameTemplate("- Bar"))
@@ -93,7 +93,7 @@ func TestNot(t *T) {
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{
-				Not("Bar"),
+				Not{Tag("Bar")},
 			}),
 		}),
 		parseNameTemplate("-Bar"))
@@ -107,7 +107,7 @@ func TestMultipleOperators(t *T) {
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{Tag("Foo"), Tag("Bar")}),
-			And([]Matcher{Tag("Fizz"), Not("Buzz")}),
+			And([]Matcher{Tag("Fizz"), Not{Tag("Buzz")}}),
 		}),
 		parseNameTemplate("Foo + Bar | Fizz - Buzz"))
 }
@@ -124,9 +124,9 @@ func TestOperatorAssociativity(t *T) {
 		Or([]And{
 			And([]Matcher{
 				Tag("Alpha"),
-				Not("Beta"),
-				Not("Gamma"),
-				Not("Delta"),
+				Not{Tag("Beta")},
+				Not{Tag("Gamma")},
+				Not{Tag("Delta")},
 			}),
 		}),
 		parseNameTemplate("Alpha - Beta - Gamma - Delta"))
@@ -148,9 +148,9 @@ func TestOperatorAssociativity(t *T) {
 				Tag("Alpha"),
 				Tag("Beta"),
 				Tag("Gamma"),
-				Not("Delta"),
-				Not("Epsilon"),
-				Not("Foxtrot"),
+				Not{Tag("Delta")},
+				Not{Tag("Epsilon")},
+				Not{Tag("Foxtrot")},
 			}),
 			And([]Matcher{
 				Tag("Omega"),
@@ -165,7 +165,7 @@ func TestOperatorPrecedence(t *T) {
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{Tag("A"), Tag("B")}),
-			And{Tag("C"), Not("D")},
+			And{Tag("C"), Not{Tag("D")}},
 		}),
 		parseNameTemplate("A + B | C - D"))
 
@@ -173,7 +173,7 @@ func TestOperatorPrecedence(t *T) {
 	// -> (Or (And (Tag A) (Not B) (Tag C)) (Tag D))
 	assertEquals(t,
 		Or([]And{
-			And([]Matcher{Tag("A"), Not("B"), Tag("C")}),
+			And([]Matcher{Tag("A"), Not{Tag("B")}, Tag("C")}),
 			And([]Matcher{Tag("D")}),
 		}),
 		parseNameTemplate("A - B + C | D"))
@@ -184,7 +184,7 @@ func TestOperatorPrecedence(t *T) {
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{Tag("A")}),
-			And([]Matcher{Tag("B"), Not("C"), Tag("D")}),
+			And([]Matcher{Tag("B"), Not{Tag("C")}, Tag("D")}),
 		}),
 		parseNameTemplate("A | B - C + D"))
 }
@@ -192,7 +192,11 @@ func TestOperatorPrecedence(t *T) {
 func TestFilters(t *T) {
 	// ":foo" -> :foo
 	assertEquals(t,
-		Filter("foo"),
+		Or([]And{
+			And([]Matcher{
+				Filter("foo"),
+			}),
+		}),
 		parseNameTemplate(":foo"))
 
 	// "A | :foo" -> (Or A :foo)
@@ -203,12 +207,11 @@ func TestFilters(t *T) {
 		}),
 		parseNameTemplate("A | :foo"))
 
-	// "A:foo" -> (And A :foo)
+	// "A:foo" -> (A:foo)
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{
-				Tag("A"),
-				Filter("foo"),
+				Filtered{"A", "foo"},
 			}),
 		}),
 		parseNameTemplate("A:foo"))
