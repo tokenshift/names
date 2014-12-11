@@ -72,12 +72,25 @@ func (n Not) String() string {
 
 func parseNameTemplate(template string) Template {
 	scanner := p.NewScanner([]byte(template))
-	r, _ := parseDisj(scanner)
+	r, _ := parseMaybe(scanner)
 	if result, ok := r.(Template); ok {
 		return result
 	} else {
 		return nil
 	}
+}
+
+// Maybe ("[template]")
+func parseMaybe(s p.Scanner) (p.ParsecNode, p.Scanner) {
+	maybe := p.And(func(ns []p.ParsecNode) p.ParsecNode {
+		return Maybe{
+			ns[1].(Matcher),
+		}
+	}, lbracket, parseDisj, rbracket)
+
+	return p.OrdChoice(func(ns []p.ParsecNode) p.ParsecNode {
+		return ns[0].(Matcher)
+	}, maybe, parseDisj)(s)
 }
 
 // Disjunction: A (| B)*
@@ -159,7 +172,7 @@ func parseFilter(s p.Scanner) (p.ParsecNode, p.Scanner) {
 // Terminals
 
 func tag(s p.Scanner) (p.ParsecNode, p.Scanner) {
-	n, s2 := p.Token(`^[^,{}:\r\n\+\-\|]+`, "TAG")(s)
+	n, s2 := p.Token(`^[0-9a-zA-Z_ ]+`, "TAG")(s)
 	if tag, ok := n.(*p.Terminal); ok {
 		return Tag(strings.TrimSpace(tag.Value)), s2
 	} else {
@@ -179,3 +192,5 @@ func filter(s p.Scanner) (p.ParsecNode, p.Scanner) {
 var plus = p.Token(`^\+`, "PLUS")
 var minus = p.Token(`^\-`, "MINUS")
 var pipe = p.Token(`^\|`, "PIPE")
+var lbracket = p.Token(`^\[`, "LBRACKET")
+var rbracket = p.Token(`^\]`, "RBRACKET")
