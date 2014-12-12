@@ -69,13 +69,13 @@ func (n Not) String() string {
 
 // Entry Point and Non-Terminals
 
-func parseNameTemplate(template string) Template {
+func parseNameTemplate(template string) (Template, error) {
 	scanner := p.NewScanner([]byte(template))
 	r, _ := parseMaybe(scanner)
 	if result, ok := r.(Template); ok {
-		return result
+		return result, nil
 	} else {
-		return nil
+		return nil, nil
 	}
 }
 

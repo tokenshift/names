@@ -17,19 +17,22 @@ func assertEquals(t *T, expected, actual interface{}) bool {
 
 func TestParseTag(t *T) {
 	// "Foo" -> (Or (And (Tag "Foo"))))
+	result, _ := parseNameTemplate("Foo")
 	assertEquals(t,
 		Or([]And{And([]Matcher{Tag("Foo")})}),
-		parseNameTemplate("Foo"))
+		result)
 
 	// "Hello World" -> (Or (And (Tag "Hello World")))
+	result, _ = parseNameTemplate("Hello World")
 	assertEquals(t,
 		Or([]And{And([]Matcher{Tag("Hello World")})}),
-		parseNameTemplate("Hello World"))
+		result)
 }
 
 func TestAnd(t *T) {
 	// "Foo + Bar"
 	// -> (Or (And (Tag "Foo") (Tag "Bar"))
+	result, _ := parseNameTemplate("Foo + Bar")
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{
@@ -37,10 +40,11 @@ func TestAnd(t *T) {
 				Tag("Bar"),
 			}),
 		}),
-		parseNameTemplate("Foo + Bar"))
+		result)
 
 	// "Foo + Bar + Fizz + Buzz"
 	// -> (Or (And (Tag "Foo") (Tag "Bar") (Tag "Fizz") (Tag "Buzz"))
+	result, _ = parseNameTemplate("Foo + Bar")
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{
@@ -48,12 +52,13 @@ func TestAnd(t *T) {
 				Tag("Bar"),
 			}),
 		}),
-		parseNameTemplate("Foo + Bar"))
+		result)
 }
 
 func TestOr(t *T) {
 	// "Foo | Bar"
 	// -> (Or (And (Tag "Foo")) (And (Tag "Bar")))
+	result, _ := parseNameTemplate("Foo | Bar")
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{
@@ -63,12 +68,13 @@ func TestOr(t *T) {
 				Tag("Bar"),
 			}),
 		}),
-		parseNameTemplate("Foo | Bar"))
+		result)
 }
 
 func TestNot(t *T) {
 	// "Foo - Bar"
 	// -> (Or (And (Tag "Foo") (Not "Bar")))
+	result, _ := parseNameTemplate("Foo - Bar")
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{
@@ -76,27 +82,29 @@ func TestNot(t *T) {
 				Not{Tag("Bar")},
 			}),
 		}),
-		parseNameTemplate("Foo - Bar"))
+		result)
 
 	// "- Bar"
 	// -> (Or (And (Not "Bar")))
+	result, _ = parseNameTemplate("- Bar")
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{
 				Not{Tag("Bar")},
 			}),
 		}),
-		parseNameTemplate("- Bar"))
+		result)
 
 	// "-Bar"
 	// -> (Or (And (Not "Bar")))
+	result, _ = parseNameTemplate("-Bar")
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{
 				Not{Tag("Bar")},
 			}),
 		}),
-		parseNameTemplate("-Bar"))
+		result)
 }
 
 func TestMultipleOperators(t *T) {
@@ -104,12 +112,13 @@ func TestMultipleOperators(t *T) {
 	// -> (Or
 	//      (And (Tag "Foo") (Tag "Bar"))
 	//      (And (Tag "Fizz") (Not "Buzz")))
+	result, _ := parseNameTemplate("Foo + Bar | Fizz - Buzz")
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{Tag("Foo"), Tag("Bar")}),
 			And([]Matcher{Tag("Fizz"), Not{Tag("Buzz")}}),
 		}),
-		parseNameTemplate("Foo + Bar | Fizz - Buzz"))
+		result)
 }
 
 func TestOperatorAssociativity(t *T) {
@@ -120,6 +129,7 @@ func TestOperatorAssociativity(t *T) {
 	//        (Not "Beta")
 	//        (Not "Gamma")
 	//        (Not "Delta")))
+	result, _ := parseNameTemplate("Alpha - Beta - Gamma - Delta")
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{
@@ -129,7 +139,7 @@ func TestOperatorAssociativity(t *T) {
 				Not{Tag("Delta")},
 			}),
 		}),
-		parseNameTemplate("Alpha - Beta - Gamma - Delta"))
+		result)
 
 	// "Alpha + Beta + Gamma - Delta - Epsilon - Foxtrot | Omega"
 	// -> (Or
@@ -142,6 +152,7 @@ func TestOperatorAssociativity(t *T) {
 	//        (Not "Foxtrot"))
 	//      (And
 	//        (Tag "Omega")))
+	result, _ = parseNameTemplate("Alpha + Beta + Gamma - Delta - Epsilon - Foxtrot | Omega")
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{
@@ -156,67 +167,74 @@ func TestOperatorAssociativity(t *T) {
 				Tag("Omega"),
 			}),
 		}),
-		parseNameTemplate("Alpha + Beta + Gamma - Delta - Epsilon - Foxtrot | Omega"))
+		result)
 }
 
 func TestOperatorPrecedence(t *T) {
 	// "A + B | C - D"
 	// -> (Or (And (Tag A) (Tag B)) (And (Tag C) (Not D)))
+	result, _ := parseNameTemplate("A + B | C - D")
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{Tag("A"), Tag("B")}),
 			And{Tag("C"), Not{Tag("D")}},
 		}),
-		parseNameTemplate("A + B | C - D"))
+		result)
 
 	// "A - B + C | D"
 	// -> (Or (And (Tag A) (Not B) (Tag C)) (Tag D))
+	result, _ = parseNameTemplate("A - B + C | D")
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{Tag("A"), Not{Tag("B")}, Tag("C")}),
 			And([]Matcher{Tag("D")}),
 		}),
-		parseNameTemplate("A - B + C | D"))
+		result)
 
 	// "A | B - C + D"
 	// -> (Or (And (Tag A))
 	//        (And (Tag B) (Not C) (Tag D)))
+	result, _ = parseNameTemplate("A | B - C + D")
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{Tag("A")}),
 			And([]Matcher{Tag("B"), Not{Tag("C")}, Tag("D")}),
 		}),
-		parseNameTemplate("A | B - C + D"))
+		result)
 }
 
 func TestFilters(t *T) {
 	// ":foo" -> :foo
+	result, _ := parseNameTemplate(":foo")
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{
 				Filter("foo"),
 			}),
 		}),
-		parseNameTemplate(":foo"))
+		result)
 
 	// "A | :foo" -> (Or A :foo)
+	result, _ = parseNameTemplate("A | :foo")
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{Tag("A")}),
 			And([]Matcher{Filter("foo")}),
 		}),
-		parseNameTemplate("A | :foo"))
+		result)
 
 	// "A:foo" -> (A:foo)
+	result, _ = parseNameTemplate("A:foo")
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{
 				Filtered{"A", "foo"},
 			}),
 		}),
-		parseNameTemplate("A:foo"))
+		result)
 
 	// "A + B:foo" -> (And A B:foo)
+	result, _ = parseNameTemplate("A + B:foo")
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{
@@ -224,9 +242,10 @@ func TestFilters(t *T) {
 				Filtered{"B", "foo"},
 			}),
 		}),
-		parseNameTemplate("A + B:foo"))
+		result)
 
 	// "A:foo + B" -> (And A:foo B)
+	result, _ = parseNameTemplate("A:foo + B")
 	assertEquals(t,
 		Or([]And{
 			And([]Matcher{
@@ -234,11 +253,12 @@ func TestFilters(t *T) {
 				Tag("B"),
 			}),
 		}),
-		parseNameTemplate("A:foo + B"))
+		result)
 }
 
 func TestMaybe(t *T) {
 	// "[A]" -> (Maybe A)
+	result, _ := parseNameTemplate("[A]")
 	assertEquals(t,
 		Maybe{
 			Or([]And{
@@ -247,9 +267,10 @@ func TestMaybe(t *T) {
 				}),
 			}),
 		},
-		parseNameTemplate("[A]"))
+		result)
 
 	// "[A + B | C:foo]" -> (Maybe (Or (And A B) (And C:foo)))
+	result, _ = parseNameTemplate("[A + B | C:foo]")
 	assertEquals(t,
 		Maybe{
 			Or([]And{
@@ -262,5 +283,13 @@ func TestMaybe(t *T) {
 				}),
 			}),
 		},
-		parseNameTemplate("[A + B | C:foo]"))
+		result)
+}
+
+func TestParsingGarbage(t *T) {
+	result, err := parseNameTemplate("% J#QOQ# ^#Q#")
+	if err == nil {
+		t.Errorf("Parsing should have failed.")
+	}
+	assertEquals(t, nil, result)
 }
