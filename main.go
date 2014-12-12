@@ -13,5 +13,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	parseNameFiles(nameFiles)
+	names := parseNameFiles(nameFiles)
+	for name := range(names) {
+		fmt.Println(name)
+	}
 }
