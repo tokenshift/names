@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 
 	p "github.com/prataprc/goparsec"
 )
@@ -168,29 +167,3 @@ func parseFilter(s p.Scanner) (p.ParsecNode, p.Scanner) {
 		return ns[1].(Filter)
 	}, colon, filter)(s)
 }
-
-// Terminals
-
-func tag(s p.Scanner) (p.ParsecNode, p.Scanner) {
-	n, s2 := p.Token(`^[0-9a-zA-Z_ ]+`, "TAG")(s)
-	if tag, ok := n.(*p.Terminal); ok {
-		return Tag(strings.TrimSpace(tag.Value)), s2
-	} else {
-		return nil, s
-	}
-}
-
-func filter(s p.Scanner) (p.ParsecNode, p.Scanner) {
-	n, s2 := p.Token(`^[a-z]+`, "FILTER")(s)
-	if filter, ok := n.(*p.Terminal); ok {
-		return Filter(strings.TrimSpace(filter.Value)), s2
-	} else {
-		return nil, s
-	}
-}
-
-var plus = p.Token(`^\+`, "PLUS")
-var minus = p.Token(`^\-`, "MINUS")
-var pipe = p.Token(`^\|`, "PIPE")
-var lbracket = p.Token(`^\[`, "LBRACKET")
-var rbracket = p.Token(`^\]`, "RBRACKET")
