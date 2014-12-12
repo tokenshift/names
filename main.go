@@ -8,7 +8,7 @@ import (
 
 func main() {
 	matchers := make([]Matcher, len(os.Args))
-	for i, arg := range(os.Args) {
+	for i, arg := range(os.Args[1:len(os.Args)]) {
 		matcher, err := parseNameTemplate(arg)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)

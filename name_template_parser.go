@@ -75,7 +75,7 @@ func parseNameTemplate(template string) (Template, error) {
 	if result, ok := r.(Template); ok {
 		return result, nil
 	} else {
-		return nil, nil
+		return nil, fmt.Errorf("Not a valid name template: '%s'", template)
 	}
 }
 
@@ -95,6 +95,10 @@ func parseMaybe(s p.Scanner) (p.ParsecNode, p.Scanner) {
 // Disjunction: A (| B)*
 func parseDisj(s p.Scanner) (p.ParsecNode, p.Scanner) {
 	return p.Kleene(func(ns []p.ParsecNode) p.ParsecNode {
+		if len(ns) == 0 {
+			return nil
+		}
+
 		terms := make([]And, len(ns))
 		for i, n := range(ns) {
 			terms[i] = n.(And)
