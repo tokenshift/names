@@ -8,19 +8,17 @@ import (
 
 // Data/AST Definition
 
-type Template interface {
-}
-
 // A single 'piece' of a template, like a Tag (possibly negated).
 type Matcher interface {
+	Matches(Entry) bool
 }
 
 type Maybe struct {
-	Template
+	Matcher
 }
 
 func (m Maybe) String() string {
-	return fmt.Sprintf("[%s]", m.Template)
+	return fmt.Sprintf("[%s]", m.Matcher)
 }
 
 // A single tag to match.
@@ -28,6 +26,10 @@ type Tag string
 
 // A standalone filter.
 type Filter string
+
+func (f Filter) Matches(e Entry) bool {
+	return e.Type == string(f)
+}
 
 func (f Filter) String() string {
 	return fmt.Sprintf(":%s", string(f))
@@ -46,12 +48,30 @@ func (f Filtered) String() string {
 // A conjunction of tags/chunks that must all must match.
 type And []Matcher
 
+func (a And) Matches(e Entry) bool {
+	for _, matcher := range(a) {
+		if !matcher.Matches(e) {
+			return false
+		}
+	}
+	return true
+}
+
 func (a And) String() string {
 	return fmt.Sprintf("(And %v)", []Matcher(a))
 }
 
 // A disjunction of conjunctions of which at least one must match.
 type Or []And
+
+func (o Or) Matches(e Entry) bool {
+	for _, matcher := range(o) {
+		if matcher.Matches(e) {
+			return true
+		}
+	}
+	return false
+}
 
 func (o Or) String() string {
 	return fmt.Sprintf("(Or %v)", []And(o))
@@ -69,10 +89,10 @@ func (n Not) String() string {
 
 // Entry Point and Non-Terminals
 
-func parseNameTemplate(template string) (Template, error) {
+func parseNameTemplate(template string) (Matcher, error) {
 	scanner := p.NewScanner([]byte(template))
 	r, _ := parseMaybe(scanner)
-	if result, ok := r.(Template); ok {
+	if result, ok := r.(Matcher); ok {
 		return result, nil
 	} else {
 		return nil, fmt.Errorf("Not a valid name template: '%s'", template)
